@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Tala Mkopo Extra{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <header class="bg-white border-b border-gray-100">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white font-bold">
+                    T
+                </div>
+                <span class="text-xl font-bold text-teal-600">Tala Mkopo Extra</span>
+            </a>
+            <div class="flex gap-4">
+                <a href="/contact" class="text-sm text-gray-600 hover:text-gray-900">Help</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-gray-900 text-white mt-16">
+        <div class="max-w-6xl mx-auto px-4 py-8 text-center">
+            <div class="flex justify-center gap-6 mb-4">
+                <a href="/privacy" class="text-sm hover:text-teal-400">Privacy</a>
+                <a href="/terms" class="text-sm hover:text-teal-400">Terms</a>
+                <a href="/contact" class="text-sm hover:text-teal-400">Contact</a>
+            </div>
+            <p class="text-sm text-gray-400">© 2025 Tala Mkopo Extra. Licensed by CBK.</p>
+        </div>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

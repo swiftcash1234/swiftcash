@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="text-center mb-12">
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Congratulations, <span id="userName"></span>!</h2>
+        <p class="text-gray-600">You are eligible for the following loan offers based on your profile.</p>
+    </div>
+
+    <div id="offersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Offers will be loaded here -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const applicationId = urlParams.get('applicationId');
+const userName = urlParams.get('name');
+const phone = urlParams.get('phone');
+
+document.getElementById('userName').textContent = userName;
+
+async function loadOffers() {
+    const response = await fetch(`/api/loan/offers/?applicationId=${applicationId}`);
+    const offers = await response.json();
+    const grid = document.getElementById('offersGrid');
+    
+    offers.forEach(offer => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition cursor-pointer';
+        card.innerHTML = `
+            <div class="text-sm text-teal-600 font-semibold mb-2">Approved Amount</div>
+            <div class="text-3xl font-bold text-gray-900 mb-4">Ksh ${offer.amount.toLocaleString()}</div>
+            <div class="space-y-2 text-sm text-gray-600 mb-6">
+                <div class="flex justify-between">
+                    <span>Interest (10%)</span>
+                    <span>Ksh ${(offer.amount * 0.1).toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Processing Fee</span>
+                    <span>Ksh ${offer.taxRevenue.toLocaleString()}</span>
+                </div>
+                <div class="flex justify-between font-semibold text-gray-900 pt-2 border-t">
+                    <span>Total Repayment</span>
+                    <span>Ksh ${offer.totalRepayment.toLocaleString()}</span>
+                </div>
+            </div>
+            <button onclick="selectOffer(${offer.amount})" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 rounded-lg transition">
+                Select Offer
+            </button>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function selectOffer(amount) {
+    window.location.href = `/payment/?applicationId=${applicationId}&amount=${amount}&phone=${phone}`;
+}
+
+loadOffers();
+</script>
+{% endblock %}

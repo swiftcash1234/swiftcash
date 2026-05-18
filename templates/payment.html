@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-12">
+    <div id="paymentStep" class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
+        <div class="w-16 h-16 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-shield-alt text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Secure Processing</h2>
+        <p class="text-gray-600 mb-8">To activate your loan of <span class="font-bold text-gray-900">Ksh <span id="displayAmount"></span></span>, a processing fee of <span class="font-bold text-gray-900">Ksh <span id="displayFee"></span></span> is required.</p>
+        
+        <div class="bg-gray-50 p-4 rounded-xl mb-8 text-left">
+            <div class="text-xs text-gray-500 uppercase font-bold mb-1">Payment Method</div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-green-500 rounded flex items-center justify-center text-white font-bold">M</div>
+                <div>
+                    <div class="font-semibold text-gray-900">M-PESA STK Push</div>
+                    <div class="text-sm text-gray-500" id="displayPhone"></div>
+                </div>
+            </div>
+        </div>
+
+        <button id="payButton" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-4 rounded-xl transition flex items-center justify-center gap-2">
+            <span>Pay Ksh <span id="buttonFee"></span> Now</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <div id="processingStep" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
+        <div class="animate-spin w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full mx-auto mb-6"></div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Processing Payment</h2>
+        <p class="text-gray-600">Please check your phone for the M-PESA prompt and enter your PIN to complete the transaction.</p>
+    </div>
+
+    <div id="successStep" class="hidden bg-white p-8 rounded-2xl shadow-sm border border-gray-100 text-center">
+        <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-check text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
+        <p class="text-gray-600 mb-8">Your loan has been activated and will be disbursed to your M-PESA account shortly.</p>
+        <a href="/" class="inline-block bg-teal-500 hover:bg-teal-600 text-white font-semibold px-8 py-3 rounded-xl transition">
+            Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const applicationId = urlParams.get('applicationId');
+const amount = parseInt(urlParams.get('amount'));
+const phone = urlParams.get('phone');
+const fee = Math.ceil(amount * 0.027);
+
+document.getElementById('displayAmount').textContent = amount.toLocaleString();
+document.getElementById('displayFee').textContent = fee.toLocaleString();
+document.getElementById('buttonFee').textContent = fee.toLocaleString();
+document.getElementById('displayPhone').textContent = phone;
+
+document.getElementById('payButton').addEventListener('click', async () => {
+    document.getElementById('paymentStep').classList.add('hidden');
+    document.getElementById('processingStep').classList.remove('hidden');
+    
+    try {
+        const response = await fetch('/api/payment/initiate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                applicationId,
+                loanAmount: amount,
+                msisdn: phone,
+                reference: `LOAN-${applicationId}`
+            })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            pollStatus(result.transactionId, result.dbId);
+        } else {
+            alert('Payment initiation failed: ' + (result.error || 'Please try again.'));
+            location.reload();
+        }
+    } catch (error) {
+        alert('An error occurred');
+        location.reload();
+    }
+});
+
+async function pollStatus(transactionId, dbId) {
+    const interval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/payment/status/?transactionId=${transactionId}`);
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                clearInterval(interval);
+                await confirmPayment(dbId);
+                document.getElementById('processingStep').classList.add('hidden');
+                document.getElementById('successStep').classList.remove('hidden');
+            } else if (result.status === 'failed') {
+                clearInterval(interval);
+                alert('Payment failed or cancelled');
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 3000);
+}
+
+async function confirmPayment(dbId) {
+    await fetch('/api/payment/confirm/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ dbId })
+    });
+}
+</script>
+{% endblock %}
